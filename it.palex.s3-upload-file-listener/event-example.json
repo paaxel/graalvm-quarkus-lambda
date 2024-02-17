@@ -1,0 +1,38 @@
+{
+    "Records": [
+        {
+            "eventVersion": "2.1",
+            "eventSource": "aws:s3",
+            "awsRegion": "eu-central-1",
+            "eventTime": "2024-02-16T00: 07: 27.240Z",
+            "eventName": "ObjectCreated:Put",
+            "userIdentity": {
+                "principalId": "AWS:XXXXXXXXXXXXXXXXXXXXXX:example@xxxxxx.it"
+            },
+            "requestParameters": {
+                "sourceIPAddress": "192.168.1.1"
+            },
+            "responseElements": {
+                "x-amz-request-id": "XXXXXXXXXXXXXXXXX",
+                "x-amz-id-2": "XXXXXXXXXXXX/XXXXXXXXXXX/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+            },
+            "s3": {
+                "s3SchemaVersion": "1.0",
+                "configurationId": "prova",
+                "bucket": {
+                    "name": "movie-storage-xxxxxx",
+                    "ownerIdentity": {
+                        "principalId": "XXXXXXXXXXXXXX"
+                    },
+                    "arn": "arn:aws:s3: : :movie-storage-xxxxxx"
+                },
+                "object": {
+                    "key": "raw-movies-cover/bcd37ecc-32fe-4142-b0fd-969ff141c99a.png",
+                    "size": 20300,
+                    "eTag": "c70fb9f70e19aaf55e0299a18ca067b8",
+                    "sequencer": "0065CEA73F2CEE5ED3"
+                }
+            }
+        }
+    ]
+}
