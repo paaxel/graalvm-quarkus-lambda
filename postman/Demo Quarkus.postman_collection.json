@@ -1,0 +1,743 @@
+{
+	"info": {
+		"_postman_id": "2a6d2c4c-f2c0-42f5-a2ac-3a267d2709f2",
+		"name": "Demo Quarkus",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "30103330"
+	},
+	"item": [
+		{
+			"name": "Authenticate",
+			"item": [
+				{
+					"name": "Get Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Check if response code is 200\r",
+									"pm.test(\"Status code is 200\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									"\r",
+									"// Parse response body\r",
+									"var responseBody = pm.response.json();\r",
+									"\r",
+									"// Check if the response has the expected structure\r",
+									"pm.test(\"Response has data field\", function () {\r",
+									"    pm.expect(responseBody).to.have.property(\"access_token\");\r",
+									"});\r",
+									"\r",
+									"// Set the collection variable LAST_ADDED_MOVIE_TITLE with the value of the id\r",
+									"pm.collectionVariables.set(\"ACCESS_TOKEN\", responseBody.access_token);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "{{CLIENT_SECRET}}",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "{{CLIENT_ID}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "grant_type",
+									"value": "client_credentials",
+									"type": "text"
+								},
+								{
+									"key": "scope",
+									"value": "resource-server/moviestore",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{COGNITO_POOL_URL}}/oauth2/token",
+							"host": [
+								"{{COGNITO_POOL_URL}}"
+							],
+							"path": [
+								"oauth2",
+								"token"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "movies",
+			"item": [
+				{
+					"name": "Add New Movie",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Check if response code is 200\r",
+									"pm.test(\"Status code is 200\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									"\r",
+									"// Parse response body\r",
+									"var responseBody = pm.response.json();\r",
+									"\r",
+									"// Check if the response has the expected structure\r",
+									"pm.test(\"Response has data field\", function () {\r",
+									"    pm.expect(responseBody).to.have.property(\"data\");\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Data field contains title\", function () {\r",
+									"    pm.expect(responseBody.data).to.have.property(\"title\");\r",
+									"});\r",
+									"\r",
+									"// Set the collection variable LAST_ADDED_MOVIE_TITLE with the value of the id\r",
+									"pm.collectionVariables.set(\"LAST_ADDED_MOVIE_TITLE\", responseBody.data.title);\r",
+									"\r",
+									"\r",
+									"pm.test(\"Data field contains id\", function () {\r",
+									"    pm.expect(responseBody.data).to.have.property(\"id\");\r",
+									"});\r",
+									"\r",
+									"// Set the collection variable LAST_ADDED_MOVIE_TITLE with the value of the id\r",
+									"pm.collectionVariables.set(\"LAST_ADDED_MOVIE_ID\", responseBody.data.id);\r",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{ACCESS_TOKEN}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"title\": \"The pursuit of happiness\",\r\n    \"minAge\": 3,\r\n    \"genre\": [\"comedy\", \"thriller\"],\r\n    \"actors\": [\r\n        {\r\n            \"name\": \"Will Smith\",\r\n            \"role\": \"Chris Gardner\",\r\n            \"gender\": \"MALE\"\r\n        },\r\n        {\r\n            \"name\": \"Jaden Smith\",\r\n            \"role\": \"Christopher Gardner\",\r\n            \"gender\": \"MALE\"\r\n        },\r\n        {\r\n            \"name\": \"Thandie Newton\",\r\n            \"role\": \"Linda\",\r\n            \"gender\": \"FEMALE\"\r\n        }\r\n    ]\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/movies",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"movies"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Hancock",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"title\": \"Hancock\",\r\n    \"minAge\": 13,\r\n    \"genre\": [\"Action\", \"Comedy\", \"Fantasy\"],\r\n    \"actors\": [\r\n        {\r\n            \"name\": \"Will Smith\",\r\n            \"role\": \"John Hancock\",\r\n            \"gender\": \"MALE\"\r\n        },\r\n        {\r\n            \"name\": \"Charlize Theron\",\r\n            \"role\": \"Mary Embrey\",\r\n            \"gender\": \"FEMALE\"\r\n        },\r\n        {\r\n            \"name\": \"Jason Bateman\",\r\n            \"role\": \"Ray Embrey\",\r\n            \"gender\": \"MALE\"\r\n        }\r\n    ]\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{BASE_URL}}/movies",
+									"host": [
+										"{{BASE_URL}}"
+									],
+									"path": [
+										"movies"
+									]
+								}
+							},
+							"_postman_previewlanguage": null,
+							"header": null,
+							"cookie": [],
+							"body": null
+						},
+						{
+							"name": "I, Robot",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"title\": \"I, Robot\",\r\n    \"minAge\": 13,\r\n    \"genre\": [\"Action\", \"Sci-Fi\", \"Thriller\"],\r\n    \"actors\": [\r\n        {\r\n            \"name\": \"Will Smith\",\r\n            \"role\": \"Del Spooner\",\r\n            \"gender\": \"MALE\"\r\n        },\r\n        {\r\n            \"name\": \"Bridget Moynahan\",\r\n            \"role\": \"Susan Calvin\",\r\n            \"gender\": \"FEMALE\"\r\n        },\r\n        {\r\n            \"name\": \"Alan Tudyk\",\r\n            \"role\": \"Sonny (voice)\",\r\n            \"gender\": \"MALE\"\r\n        }\r\n    ]\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{BASE_URL}}/movies",
+									"host": [
+										"{{BASE_URL}}"
+									],
+									"path": [
+										"movies"
+									]
+								}
+							},
+							"_postman_previewlanguage": null,
+							"header": null,
+							"cookie": [],
+							"body": null
+						},
+						{
+							"name": "Bad Boys",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"title\": \"Bad Boys\",\r\n    \"minAge\": 17,\r\n    \"genre\": [\"Action\", \"Comedy\", \"Crime\"],\r\n    \"actors\": [\r\n        {\r\n            \"name\": \"Will Smith\",\r\n            \"role\": \"Mike Lowrey\",\r\n            \"gender\": \"MALE\"\r\n        },\r\n        {\r\n            \"name\": \"Martin Lawrence\",\r\n            \"role\": \"Marcus Burnett\",\r\n            \"gender\": \"MALE\"\r\n        },\r\n        {\r\n            \"name\": \"Téa Leoni\",\r\n            \"role\": \"Julie Mott\",\r\n            \"gender\": \"FEMALE\"\r\n        }\r\n    ]\r\n}\r\n",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{BASE_URL}}/movies",
+									"host": [
+										"{{BASE_URL}}"
+									],
+									"path": [
+										"movies"
+									]
+								}
+							},
+							"_postman_previewlanguage": null,
+							"header": null,
+							"cookie": [],
+							"body": null
+						},
+						{
+							"name": "Bad Boys II",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"title\": \"Bad Boys II\",\r\n    \"minAge\": 17,\r\n    \"genre\": [\"Action\", \"Comedy\", \"Crime\"],\r\n    \"actors\": [\r\n        {\r\n            \"name\": \"Will Smith\",\r\n            \"role\": \"Mike Lowrey\",\r\n            \"gender\": \"MALE\"\r\n        },\r\n        {\r\n            \"name\": \"Martin Lawrence\",\r\n            \"role\": \"Marcus Burnett\",\r\n            \"gender\": \"MALE\"\r\n        },\r\n        {\r\n            \"name\": \"Gabrielle Union\",\r\n            \"role\": \"Sydney 'Syd' Burnett\",\r\n            \"gender\": \"FEMALE\"\r\n        }\r\n    ]\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{BASE_URL}}/movies",
+									"host": [
+										"{{BASE_URL}}"
+									],
+									"path": [
+										"movies"
+									]
+								}
+							},
+							"_postman_previewlanguage": null,
+							"header": null,
+							"cookie": [],
+							"body": null
+						},
+						{
+							"name": "Bad Boys for Life",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"title\": \"Bad Boys for Life\",\r\n    \"minAge\": 17,\r\n    \"genre\": [\"Action\", \"Comedy\", \"Crime\"],\r\n    \"actors\": [\r\n        {\r\n            \"name\": \"Will Smith\",\r\n            \"role\": \"Mike Lowrey\",\r\n            \"gender\": \"MALE\"\r\n        },\r\n        {\r\n            \"name\": \"Martin Lawrence\",\r\n            \"role\": \"Marcus Burnett\",\r\n            \"gender\": \"MALE\"\r\n        },\r\n        {\r\n            \"name\": \"Vanessa Hudgens\",\r\n            \"role\": \"Kelly\",\r\n            \"gender\": \"FEMALE\"\r\n        }\r\n    ]\r\n}\r\n",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{BASE_URL}}/movies",
+									"host": [
+										"{{BASE_URL}}"
+									],
+									"path": [
+										"movies"
+									]
+								}
+							},
+							"_postman_previewlanguage": null,
+							"header": null,
+							"cookie": [],
+							"body": null
+						},
+						{
+							"name": "Men in Black",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"title\": \"Men in Black\",\r\n    \"minAge\": 10,\r\n    \"genre\": [\"Action\", \"Comedy\", \"Sci-Fi\"],\r\n    \"actors\": [\r\n        {\r\n            \"name\": \"Will Smith\",\r\n            \"role\": \"Agent J\",\r\n            \"gender\": \"MALE\"\r\n        },\r\n        {\r\n            \"name\": \"Tommy Lee Jones\",\r\n            \"role\": \"Agent K\",\r\n            \"gender\": \"MALE\"\r\n        },\r\n        {\r\n            \"name\": \"Linda Fiorentino\",\r\n            \"role\": \"Laurel Weaver\",\r\n            \"gender\": \"FEMALE\"\r\n        }\r\n    ]\r\n}\r\n",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{BASE_URL}}/movies",
+									"host": [
+										"{{BASE_URL}}"
+									],
+									"path": [
+										"movies"
+									]
+								}
+							},
+							"_postman_previewlanguage": null,
+							"header": null,
+							"cookie": [],
+							"body": null
+						}
+					]
+				},
+				{
+					"name": "FindMovieById",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{ACCESS_TOKEN}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/movies/{{LAST_ADDED_MOVIE_ID}}",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"movies",
+								"{{LAST_ADDED_MOVIE_ID}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "FindMovieByTitle",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{ACCESS_TOKEN}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/movies/find-by-title/?title={{LAST_ADDED_MOVIE_TITLE}}",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"movies",
+								"find-by-title",
+								""
+							],
+							"query": [
+								{
+									"key": "title",
+									"value": "{{LAST_ADDED_MOVIE_TITLE}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "FindAllMovie",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{ACCESS_TOKEN}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/movies",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"movies"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Movie",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{ACCESS_TOKEN}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/movies/{{LAST_ADDED_MOVIE_ID}}",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"movies",
+								"{{LAST_ADDED_MOVIE_ID}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Download Movie Cover (Create Link)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Check if response code is 200\r",
+									"pm.test(\"Status code is 200\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									"\r",
+									"// Parse response body\r",
+									"var responseBody = pm.response.json();\r",
+									"\r",
+									"// Check if the response has the expected structure\r",
+									"pm.test(\"Response has data field\", function () {\r",
+									"    pm.expect(responseBody).to.have.property(\"data\");\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Data field contains value\", function () {\r",
+									"    pm.expect(responseBody.data).to.have.property(\"value\");\r",
+									"});\r",
+									"\r",
+									"// Set the collection variable LAST_ADDED_MOVIE_TITLE with the value of the id\r",
+									"pm.collectionVariables.set(\"AWS_DOWNLOAD_PRESIGNED_URL\", responseBody.data.value);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{ACCESS_TOKEN}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/movie-covers/build-download-url/{{LAST_ADDED_MOVIE_ID}}",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"movie-covers",
+								"build-download-url",
+								"{{LAST_ADDED_MOVIE_ID}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Download Movie Cover (Execute)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{AWS_DOWNLOAD_PRESIGNED_URL}}",
+							"host": [
+								"{{AWS_DOWNLOAD_PRESIGNED_URL}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Upload Movie Cover (Create Link)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Check if response code is 200\r",
+									"pm.test(\"Status code is 200\", function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									"\r",
+									"// Parse response body\r",
+									"var responseBody = pm.response.json();\r",
+									"\r",
+									"// Check if the response has the expected structure\r",
+									"pm.test(\"Response has data field\", function () {\r",
+									"    pm.expect(responseBody).to.have.property(\"data\");\r",
+									"});\r",
+									"\r",
+									"pm.test(\"Data field contains value\", function () {\r",
+									"    pm.expect(responseBody.data).to.have.property(\"value\");\r",
+									"});\r",
+									"\r",
+									"// Set the collection variable LAST_ADDED_MOVIE_TITLE with the value of the id\r",
+									"pm.collectionVariables.set(\"AWS_UPLOAD_PRESIGNED_URL\", responseBody.data.value);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{ACCESS_TOKEN}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/movie-covers/build-upload-url/{{LAST_ADDED_MOVIE_ID}}?extension=.png",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"movie-covers",
+								"build-upload-url",
+								"{{LAST_ADDED_MOVIE_ID}}"
+							],
+							"query": [
+								{
+									"key": "extension",
+									"value": ".png"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Upload Movie Cover (Execute)",
+					"protocolProfileBehavior": {
+						"disabledSystemHeaders": {}
+					},
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/octet-stream",
+								"type": "text",
+								"disabled": true
+							}
+						],
+						"body": {
+							"mode": "file",
+							"file": {
+								"src": "/C:/Users/palex/Downloads/the_pursuit_of_happiness.jpg"
+							}
+						},
+						"url": {
+							"raw": "{{AWS_UPLOAD_PRESIGNED_URL}}",
+							"host": [
+								"{{AWS_UPLOAD_PRESIGNED_URL}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Get Version",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{ACCESS_TOKEN}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "eyJraWQiOiJJWTFUR0l1Wk9LVmRGZGpQMmpUUUYwaEFNQVNvS2ZiUlVvekdkRHBKM3ZVPSIsImFsZyI6IlJTMjU2In0.eyJzdWIiOiIyZGZza21hMGIxajZqM21vazJmdjBlbmlpYiIsInRva2VuX3VzZSI6ImFjY2VzcyIsInNjb3BlIjoicmVzb3VyY2Utc2VydmVyXC9tb3ZpZXN0b3JlIiwiYXV0aF90aW1lIjoxNzA4MTA3NDQ2LCJpc3MiOiJodHRwczpcL1wvY29nbml0by1pZHAuZXUtY2VudHJhbC0xLmFtYXpvbmF3cy5jb21cL2V1LWNlbnRyYWwtMV9RT0VxREdzTnUiLCJleHAiOjE3MDgxMTEwNDYsImlhdCI6MTcwODEwNzQ0NiwidmVyc2lvbiI6MiwianRpIjoiZDc3NWUzMTgtNTJjMy00MWQxLThlMDItYWU3YmY1MmQ5NzZmIiwiY2xpZW50X2lkIjoiMmRmc2ttYTBiMWo2ajNtb2syZnYwZW5paWIifQ.Iua-YcypRU8xeUINMBXa_YNRA9AwerhQGtVms83VbkIRDbE_OtRHx7KlSUk55vUadgwuPullPENev2-Rvb55k5iPdlu1YzktcfubCtKpqpaf2enrIXKj_IkUBi-ksJIVufcZAPnBbB1-8PM9PHc4TCrl42E_EpFudXSMjNx8N8lyWoGsJZ5XINBXCv2ay4evN7Tbr55-Cm7O-f099ddqba1XcMCr-QtjBHtf-tWwp_peh3nQGPccAR8PewF1uMmEY1MNQLz-JW8WooLYG9ytVBiEer8qoc9sB2MOoFzfyH_qx1KizAnMP1YKx0goUHmT4wUzd18n3vh24dlWM0rLlQ",
+						"type": "text",
+						"disabled": true
+					}
+				],
+				"url": {
+					"raw": "{{BASE_URL}}/version",
+					"host": [
+						"{{BASE_URL}}"
+					],
+					"path": [
+						"version"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "BASE_URL",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "LAST_ADDED_MOVIE_TITLE",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "LAST_ADDED_MOVIE_ID",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "AWS_UPLOAD_PRESIGNED_URL",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "AWS_DOWNLOAD_PRESIGNED_URL",
+			"value": ""
+		},
+		{
+			"key": "COGNITO_POOL_URL",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "CLIENT_ID",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "CLIENT_SECRET",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "ACCESS_TOKEN",
+			"value": ""
+		}
+	]
+}
