@@ -1,0 +1,536 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template for creating Movie sample application
+
+
+Parameters:
+  AppName:
+    Type: String
+    Description: The name of the application
+    Default: MoviesApp
+
+  BucketName:
+    Type: String
+    Description: The name of the S3 bucket
+    Default: movie-storage
+
+  LambdaPackageBucketName:
+    Type: String
+    Description: The name of the S3 bucket where the function zip file will be uploaded
+
+  LambdaPackageFileKey:
+    Type: String
+    Description: The name of the uploaded file key of the function zip
+
+  LambdaS3UploadImageListenePackageFileKey:
+    Type: String
+    Description: The name of the uploaded file key of the function file uploader listener
+
+  AllowedSourceIps:
+    Type: String
+    Description: The allowed source IP addresses for accessing the API
+
+  MaximumRequestPerIpEveryFiveMin:
+    Type: Number
+    Description: The limit on requests per 5-minute period that an IP address can make to the service
+    Default: 1000
+
+  StorageS3CoversSubfolder:
+    Type: String
+    Description: Subfolder of the bucket where the movies cover will be stored
+    Default: movies-cover
+
+  StorageS3RawCoversSubfolder:
+    Type: String
+    Description: Subfolder of the bucket where the movies cover will be uploaded
+    Default: raw-movies-cover
+
+  ValidImageExtensions:
+    Type: String
+    Description: Csv of accepted image extensions
+    Default: ".png,.jpg" 
+
+  MaxImageSize:
+    Type: String
+    Description: Maximum size of the image
+    Default: "1048576" # 1 MB = 1048576 bytes (1024*1024 bytes)
+
+  CustomCognitoDomainAppName:
+    Type: String
+    Description: The name of the custom domain app name
+    Default: movie-app-poc
+
+  ApiStageName:
+    Type: String
+    Description: Name of API stage name
+    Default: prod
+
+Resources:
+
+
+  DynamoDbTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${AppName}Table"
+      AttributeDefinitions:
+        - AttributeName: Id
+          AttributeType: S
+        - AttributeName: Title
+          AttributeType: S
+      KeySchema:
+        - AttributeName: Id
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+      GlobalSecondaryIndexes:
+        - IndexName: MovieTitleIndex
+          KeySchema:
+            - AttributeName: Title
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+
+  LambdaS3UploadImageListenerExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: S3ReadOnlyPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:DeleteObject
+                Resource: 
+                  # use bucket name to avoid circular dependencies
+                  - !Sub "arn:aws:s3:::${BucketName}/${StorageS3RawCoversSubfolder}/*"
+              - Effect: Deny # avoid dangerous loops with S3 events
+                Action:
+                  - s3:PutObject
+                Resource:
+                  # use bucket name to avoid circular dependencies
+                  - !Sub "arn:aws:s3:::${BucketName}/${StorageS3RawCoversSubfolder}/*"                  
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                Resource: 
+                  # use bucket name to avoid circular dependencies
+                  - !Sub "arn:aws:s3:::${BucketName}/${StorageS3CoversSubfolder}/*"                
+        - PolicyName: LambdaAccessPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:UpdateItem
+                  - dynamodb:GetItem
+                Resource: 
+                  - !GetAtt DynamoDbTable.Arn
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:DeleteObject
+                  - s3:ListBucket
+                  - s3:GetBucketLocation
+                Resource:
+                  # use bucket name to avoid circular dependencies
+                  - !Sub arn:aws:s3:::${BucketName}
+                  - !Sub arn:aws:s3:::${BucketName}/*
+              - Effect: Allow
+                Action:
+                - logs:CreateLogGroup
+                Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+              - Effect: Allow
+                Action:
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+                Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${AppName}S3UploadImageListener:*
+              - Effect: Allow
+                Action:
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
+                  - xray:GetSamplingRules
+                  - xray:GetSamplingTargets
+                  - xray:GetSamplingStatisticSummaries
+                Resource: "*"
+
+
+
+  LambdaS3UploadImageListenerFunction:
+    DependsOn:
+      - DynamoDbTable
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${AppName}S3UploadImageListener"
+      PackageType: Zip
+      Runtime: python3.10
+      Handler: app.lambda_handler
+      TracingConfig: 
+        Mode: Active # Enable X-Ray tracing
+      Code:
+        S3Bucket: !Sub "${LambdaPackageBucketName}"
+        S3Key: !Sub "${LambdaS3UploadImageListenePackageFileKey}"
+      Timeout: 60
+      MemorySize: 512
+      EphemeralStorage:
+        # MountPath: /tmp
+        Size: 512
+      Environment:
+        Variables:
+          DYNAMODB_TABLE_NAME: !Sub "${AppName}Table"
+          VALID_IMAGE_EXTENSIONS: !Sub "${ValidImageExtensions}"
+          MAX_IMAGE_SIZE: !Sub "${MaxImageSize}"
+          CLEAN_IMAGE_FOLDER: !Sub "${StorageS3CoversSubfolder}"
+      Role: !GetAtt LambdaS3UploadImageListenerExecutionRole.Arn
+      LoggingConfig:
+        LogFormat: JSON
+        LogGroup: !Sub "/aws/lambda/${AppName}S3UploadImageListener"
+        ApplicationLogLevel: INFO
+
+  LambdaSendNotificationPermission:
+    DependsOn:
+      - LambdaS3UploadImageListenerFunction
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Sub "${AppName}S3UploadImageListener"
+      Principal: s3.amazonaws.com
+      # use bucket name to avoid circular dependencies
+      SourceArn: !Sub "arn:aws:s3:::${BucketName}"
+
+  StorageS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref BucketName
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: 's3:ObjectCreated:*'
+            # the lambda listener function should be created before s3 bucket
+            Function: !GetAtt LambdaS3UploadImageListenerFunction.Arn
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: !Sub "${StorageS3RawCoversSubfolder}/"
+
+
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AppName}LambdaRole"
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaAccessPolicy
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:*
+                Resource: !GetAtt DynamoDbTable.Arn
+              - Effect: Allow
+                Action:
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                Resource: !Sub "${DynamoDbTable.Arn}/index/MovieTitleIndex"
+              - Effect: Deny
+                Action: dynamodb:DeleteTable
+                Resource: !GetAtt DynamoDbTable.Arn
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:DeleteObject
+                  - s3:ListBucket
+                  - s3:GetBucketLocation
+                Resource:
+                  - !Sub arn:aws:s3:::${StorageS3Bucket}
+                  - !Sub arn:aws:s3:::${StorageS3Bucket}/*
+              - Effect: Allow
+                Action:
+                - logs:CreateLogGroup
+                Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+              - Effect: Allow
+                Action:
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+                Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${AppName}:*
+              - Effect: Allow
+                Action:
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
+                  - xray:GetSamplingRules
+                  - xray:GetSamplingTargets
+                  - xray:GetSamplingStatisticSummaries
+                Resource: "*"
+
+
+
+
+  LambdaFunction:
+    DependsOn:
+      - DynamoDbTable
+      - StorageS3Bucket
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${AppName}Function"
+      PackageType: Zip
+      Runtime: provided.al2
+      Handler: bootstrap
+      TracingConfig: 
+        Mode: Active # Enable X-Ray tracing
+      Code:
+        S3Bucket: !Sub "${LambdaPackageBucketName}"
+        S3Key: !Sub "${LambdaPackageFileKey}"
+      Timeout: 29
+      MemorySize: 512
+      EphemeralStorage:
+        # MountPath: /tmp
+        Size: 512
+      Environment:
+        Variables:
+          app_aws_region: !Sub "${AWS::Region}"
+          app_movie_table_name: !Sub "${AppName}Table"
+          app_storage_bucket_name: !Sub "${StorageS3Bucket}"
+          app_storage_raw_movie_cover_folder: !Sub "${StorageS3RawCoversSubfolder}"
+          app_cover_extensions_accepted: !Sub "${ValidImageExtensions}"
+      Role: !GetAtt LambdaRole.Arn
+      LoggingConfig:
+        LogFormat: JSON
+        LogGroup: !Sub /aws/lambda/${AppName}
+        ApplicationLogLevel: INFO
+
+  
+  ApiGatewayInvokeLambdaPermission:
+    Type: "AWS::Lambda::Permission"
+    DependsOn:
+      - AWSServerlessRestApi
+      - LambdaFunction
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt LambdaFunction.Arn
+      Principal: apigateway.amazonaws.com
+
+
+
+  # Api Gateway APIS creation 
+  AWSServerlessRestApi:
+    DependsOn:
+      - LambdaFunction
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub "${AppName}Api"
+
+
+  AWSServerlessRestApiProxyResource:
+    DependsOn:
+      - AWSServerlessRestApi
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref AWSServerlessRestApi
+      ParentId: !GetAtt AWSServerlessRestApi.RootResourceId
+      PathPart: '{proxy+}'
+
+
+  
+
+
+
+  CognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub "${AppName}UserPool"
+      AutoVerifiedAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 10
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: false
+          RequireUppercase: true
+
+
+  CognitoResourceServer:
+    Type: AWS::Cognito::UserPoolResourceServer
+    Properties:
+      UserPoolId: !Ref CognitoUserPool
+      Identifier: "resource-server"
+      Name: !Sub "${AppName}CognitoResourceServer"
+      Scopes:
+        - ScopeName: "moviestore"
+          ScopeDescription: "Movie store access"
+
+  CognitoUserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Sub "${CustomCognitoDomainAppName}"
+      UserPoolId: !Ref CognitoUserPool
+
+  CognitoUserPoolClient:
+    DependsOn:
+      - CognitoResourceServer
+      - CognitoUserPoolDomain
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub "${AppName}UserPoolClient"
+      UserPoolId: !Ref CognitoUserPool
+      GenerateSecret: true
+      ExplicitAuthFlows:
+        - ALLOW_ADMIN_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+      AllowedOAuthFlowsUserPoolClient: true
+      SupportedIdentityProviders:
+        - COGNITO
+      AllowedOAuthFlows:
+        - client_credentials
+      AllowedOAuthScopes: 
+        - !Sub "resource-server/moviestore"
+
+
+  ApiAuthorizer:
+    Type: AWS::ApiGateway::Authorizer
+    Properties:
+      Name: !Sub "${AppName}CognitoAuthorizer"
+      RestApiId: !Ref AWSServerlessRestApi
+      Type: COGNITO_USER_POOLS
+      IdentitySource: method.request.header.Authorization
+      AuthorizerResultTtlInSeconds: 60
+      ProviderARNs: 
+        - !GetAtt  CognitoUserPool.Arn
+
+
+
+  AWSServerlessRestApiProxyMethod:
+    DependsOn:
+      - AWSServerlessRestApiProxyResource
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref AWSServerlessRestApi
+      ResourceId: !Ref AWSServerlessRestApiProxyResource
+      HttpMethod: ANY
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref ApiAuthorizer
+      AuthorizationScopes:
+        - !Sub "resource-server/moviestore"
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaFunction.Arn}/invocations
+  
+  
+  AWSServerlessRestApiDeployment:
+    DependsOn:
+      - AWSServerlessRestApiProxyMethod
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId: !Ref AWSServerlessRestApi
+      StageName: !Sub "${ApiStageName}"
+
+
+  # Waf configuration on Api Gateway
+  WafIpSet:
+    Type: AWS::WAFv2::IPSet
+    Properties:
+      Name: !Sub "${AppName}AllowedIPSet"
+      Scope: REGIONAL
+      IPAddressVersion: IPV4
+      Addresses: !Split [";", !Ref AllowedSourceIps]
+
+  WafWebACL:
+    Type: AWS::WAFv2::WebACL
+    Properties:
+      Name: WafWebACL
+      Scope: REGIONAL
+      VisibilityConfig:
+        CloudWatchMetricsEnabled: true
+        MetricName: !Sub "WafWebACLMetrics${AppName}"
+        SampledRequestsEnabled: true
+      DefaultAction:
+        Block: {}
+      Rules:
+        - Name: WafFilterIPRule
+          Priority: 2
+          VisibilityConfig:
+            CloudWatchMetricsEnabled: true
+            MetricName: !Sub "WafFilterIPRuleMetric${AppName}"
+            SampledRequestsEnabled: true
+          Action:
+            Allow: {}
+          Statement:
+            IPSetReferenceStatement:
+              Arn: !GetAtt WafIpSet.Arn
+        - Name: IpRateBasedRule
+          Priority: 3
+          VisibilityConfig:
+            CloudWatchMetricsEnabled: true
+            MetricName: !Sub "IpRateBasedRuleMetric${AppName}"
+            SampledRequestsEnabled: true
+          Action:
+            Block: {}
+          Statement:
+            RateBasedStatement:
+              Limit: !Ref MaximumRequestPerIpEveryFiveMin  # limit on requests per 5-minute period
+              AggregateKeyType: IP
+        - Name: SqlInjectionRule
+          Priority: 4
+          VisibilityConfig:
+            CloudWatchMetricsEnabled: true
+            MetricName: !Sub "SqlInjectionRuleMetric${AppName}"
+            SampledRequestsEnabled: true
+          Action:
+            Block: {}
+          Statement:
+            SqliMatchStatement:
+              SensitivityLevel: LOW
+              FieldToMatch:
+                Body: {}
+              TextTransformations:
+                - Type: "NONE"
+                  Priority: 0
+          
+
+  WafWebACLAssociation:
+    DependsOn: 
+      - AWSServerlessRestApiDeployment
+    Type: AWS::WAFv2::WebACLAssociation
+    Properties:
+      WebACLArn: !GetAtt WafWebACL.Arn
+      ResourceArn: !Join ["", ["arn:aws:apigateway:", !Sub "${AWS::Region}::/restapis/", !GetAtt AWSServerlessRestApi.RestApiId, !Sub "/stages/${ApiStageName}"]]
+
+  
+
+
+Outputs:
+  DynamoDBTableName:
+    Description: The name of the DynamoDB table created
+    Value: !Ref DynamoDbTable
+    Export:
+      Name: !Sub "${AWS::StackName}-DynamoDBTableName"
+
+  DynamoDBTableArn:
+    Description: The ARN of the DynamoDB table created
+    Value: !GetAtt DynamoDbTable.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-DynamoDBTableArn"
+
+  LambdaFunctionArn:
+    Description: The ARN of the Quarkus Lambda function
+    Value: !GetAtt LambdaFunction.Arn
+
+  AWSServerlessRestApiEndpoint:
+    Description: The endpoint URL of the API Gateway
+    Value: !Sub "https://${AWSServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/prod"
