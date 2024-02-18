@@ -70,6 +70,11 @@ After successfully building the application, you can deploy it on AWS using the 
 - **CloudWatch**: For monitoring application logs and metrics.
 - **X-Ray**: For tracing and debugging distributed applications.
 
+### App AWS Architecture
+
+![alt text](https://github.com/paaxel/graalvm-quarkus-lambda/architecture_aws_app.drawio.png)
+
+
 ## AWS Deployment
 
 To deploy the application on AWS you need to:
@@ -174,7 +179,7 @@ Write-Host "Stack creation complete."
 
 ```
 
-## How to use the APP
+## How to use the Postman Collection to call APIs
 
 Within the repository, you'll find a Postman collection designed for utilizing the API. This collection can be utilized once deployment is finalized. Before proceeding, follow these steps:
 - import the collection in your postman app;
@@ -188,7 +193,6 @@ Within the repository, you'll find a Postman collection designed for utilizing t
     - **CLIENT_ID**: Populate this field with the client ID of the Cognito app client, obtainable from the app client section within the Cognito user pool details.
     - **CLIENT_SECRET**: Populate this field with the client secret of the Cognito app client, obtainable from the app client section within the Cognito user pool details.
     - **ACCESS_TOKEN**: Leave this field blank; it serves as a placeholder parameter within the collection.
-
 
 ## Contributing
 We welcome contributions from the community! If you would like to contribute to this project, please follow these guidelines:
