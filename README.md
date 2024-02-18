@@ -72,7 +72,7 @@ After successfully building the application, you can deploy it on AWS using the 
 
 ### App AWS Architecture
 
-![alt text](https://github.com/paaxel/graalvm-quarkus-lambda/architecture_aws_app.drawio.png)
+![alt text](./architecture_aws_app.drawio.png)
 
 
 ## AWS Deployment
