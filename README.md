@@ -25,9 +25,6 @@ The application is designed can to be imported into IntelliJ IDEA that gives the
 
 To compile the application using GraalVM, you'll need to install the Quarkus CLI. Follow the official [guide](https://quarkus.io/guides/cli-tooling) for installation instructions. We recommend using Chocolatey for a seamless installation process.
 
-To compile the application with graalVM you need to install quarkus cli.  
-To install quarkus CLI you can follow the official guide here: . We suggest to use chocolatey to complete the installation process.
-
 After you install quarkus cli you follow these steps:
 
 - Ensure that Docker is running on your system.
