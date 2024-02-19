@@ -21,7 +21,7 @@ Before diving into the project, ensure you have the following prerequisites inst
 
 The application is designed can to be imported into IntelliJ IDEA that gives the possibility to install Quarkus official extensions, providing a smooth development experience.
 
-## Compilation and lambda packagind
+## Compilation and lambda packaging
 
 To compile the application using GraalVM, you'll need to install the Quarkus CLI. Follow the official [guide](https://quarkus.io/guides/cli-tooling) for installation instructions. We recommend using Chocolatey for a seamless installation process.
 
