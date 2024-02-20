@@ -84,13 +84,13 @@ public class MovieDynamoRepository implements MovieRepository {
             }
 
             if(resultItems.size()>1){
-                throw new RuntimeException("Found more items with same id");
+                throw new RuntimeException("Found more items with same title");
             }
             if(resultsIterator.hasNext()){
                 resultItems = resultsIterator.next().items();
 
                 if(resultItems.size()!=0){
-                    throw new RuntimeException("Found more items with same id");
+                    throw new RuntimeException("Found more items with same title");
                 }
             }
 
