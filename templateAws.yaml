@@ -323,7 +323,7 @@ Resources:
       Action: lambda:InvokeFunction
       FunctionName: !GetAtt LambdaFunction.Arn
       Principal: apigateway.amazonaws.com
-      SourceArn: !Join ["", [!Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:", !GetAtt AWSServerlessRestApi.RootResourceId, "/*/*/*"]]
+      SourceArn: !Join ["", [!Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:", !GetAtt AWSServerlessRestApi.RestApiId, "/*/*/*"]]
 
 
 
